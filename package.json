@@ -1,0 +1,27 @@
+{
+  "name": "hibou",
+  "version": "0.0.1",
+  "description": "a scalable state container module",
+  "main": "index.js",
+  "scripts": {
+    "demo": "ts-node demo.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/AntoineYANG/hibou.git"
+  },
+  "keywords": [
+    "state",
+    "immutable",
+    "flux"
+  ],
+  "author": "Shintou You",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/AntoineYANG/hibou/issues"
+  },
+  "homepage": "https://github.com/AntoineYANG/hibou#readme",
+  "dependencies": {
+    "nanoid": "^3.1.25"
+  }
+}
