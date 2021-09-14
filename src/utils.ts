@@ -27,7 +27,7 @@ export const resolvePtr = <S, R>(getState: () => Readonly<S>, definition: (root:
     const p = [...path];
     let target: unknown = getState();
     while (p.length) {
-      target = target[p.shift()];
+      target = (target as any)[p.shift()!];
     }
     return target as Readonly<R>;
   };

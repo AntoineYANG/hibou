@@ -1,10 +1,16 @@
 {
   "name": "hibou",
-  "version": "0.0.1",
+  "version": "0.0.0-beta1",
   "description": "a scalable state container module",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "demo": "ts-node demo.ts"
+    "demo": "ts-node demo.ts",
+    "build": "cross-env NODE_ENV=production npx webpack",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -23,5 +29,12 @@
   "homepage": "https://github.com/AntoineYANG/hibou#readme",
   "dependencies": {
     "nanoid": "^3.1.25"
+  },
+  "devDependencies": {
+    "clean-webpack-plugin": "^4.0.0",
+    "cross-env": "^7.0.3",
+    "ts-loader": "^9.2.5",
+    "webpack": "^5.52.1",
+    "webpack-cli": "^4.8.0"
   }
 }

@@ -52,14 +52,28 @@ const main = () => {
   context.listen('xxxEvent', () => {
     console.log('xxxEvent');
   });
-  context.actions.plus(10);
-  context.actions.reset();
-  context.actions.plus();
-  context.actions.setId(-1);
+  // context.actions.plus(10);
+  // context.actions.reset();
+  // context.actions.plus();
+  // context.actions.setId(-1);
   context.actions.plusSync();
+  context.actions.plusSync();
+  context.actions.setIdSync(2);
+  context.actions.plusSync();
+  context.actions.setIdSync(3);
+  context.actions.plusSync();
+  context.actions.setIdSync(4);
+  context.actions.plusSync();
+  context.actions.setIdSync(5);
   context.actions.plusSync(5);
-  context.actions.asyncPlus(7);
+  // context.actions.asyncPlus(7);
   context.emit('xxxEvent');
+  console.log(context.state);
+  // context.travel.go(-1);
+  context.travel.backFor(2, 'plus');
+  console.log(context.state);
+  context.travel.forwardTill(2, 'plus');
+  console.log(context.state);
 };
 
 main();

@@ -1,11 +1,40 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
     "target": "es2018",
-    "jsx": "preserve",
-    "sourceMap": true
+    "module": "ESNext",
+    "strict": true,
+    "declaration": true,
+    "importHelpers": true,
+    "noImplicitAny": false,
+    "strictPropertyInitialization": false,
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "outDir": "./dist",
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "scripthost"
+    ],
+    "skipLibCheck": true,
+    "types": [],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve"
   },
+  "include": [
+    "src/*",
+    "index.ts"
+  ],
   "exclude": [
+    "./demo.tsx",
     "node_modules",
     "**/node_modules/*"
   ]

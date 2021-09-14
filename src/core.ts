@@ -12,7 +12,8 @@ import {
   ContextSyncActions,
   Getter,
   Hooks,
-  Pointer
+  Pointer,
+  TimeTravelCaller
 } from './types';
 import { resolvePtr } from './utils';
 
@@ -26,6 +27,7 @@ class Store<
   private history: Immutable<S>;
 
   private batchQueue: {
+    action: A | AA;
     apply: (prevState: S) => Partial<S>;
     resolve: (state: Readonly<S>) => void;
   }[] = [];
@@ -48,6 +50,10 @@ class Store<
   private hooks: Hooks<S, A, AA> = {
     beforeDispatch: []
   };
+
+  private updates: {
+    [version: string]: A | AA;
+  } = {};
 
   constructor(state: S) {
     this.history = new Immutable(state);
@@ -91,8 +97,9 @@ class Store<
   private update(): void {
     console.log('batched update', this.batchQueue.length);
     const resolveFuncs: ((state: Readonly<S>) => void)[] = [];
-    this.batchQueue.forEach(({ apply, resolve }) => {
+    this.batchQueue.forEach(({ action, apply, resolve }) => {
       this.history.current = Object.assign({}, this.state, apply(this.state));
+      this.updates[this.history.versions[this.history.head]] = action;
       resolveFuncs.push(resolve);
     });
     resolveFuncs.forEach(resolve => {
@@ -123,7 +130,7 @@ class Store<
           return;
         }
       }
-      this.batchQueue.push({ apply, resolve });
+      this.batchQueue.push({ action: actionName, apply, resolve });
       this.batch();
     });
   }
@@ -140,6 +147,7 @@ class Store<
       }
     }
     this.history.current = Object.assign({}, this.state, action(this.state, ...args));
+    this.updates[this.history.versions[this.history.head]] = actionName;
     this.postUpdate();
     return this.state;
   }
@@ -182,18 +190,67 @@ class Store<
   }
 
   listen<Name extends keyof EE>(eventName: Name, callback: (...args: Parameters<EE[Name]>) => void): void {
-    this.listeners[eventName] = (this.listeners[eventName] ?? []).concat({
+    this.listeners[eventName] = (this.listeners[eventName]! ?? []).concat({
       callback,
       once: false
     });
   }
 
   once<Name extends keyof EE>(eventName: Name, callback: (...args: Parameters<EE[Name]>) => void): void {
-    this.listeners[eventName] = (this.listeners[eventName] ?? []).concat({
+    this.listeners[eventName] = (this.listeners[eventName]! ?? []).concat({
       callback,
       once: true
     });
   }
+
+  travel: TimeTravelCaller<S, A | AA> = {
+    at: (idx: number) => this.history.at(idx),
+    go: (idx: number) => this.history.go(idx),
+    move: (idx: number) => this.history.go(this.history.head + idx),
+    prev: () => this.history.go(this.history.head - 1),
+    next: () => this.history.go(this.history.head + 1),
+    backFor: (...args: [actionName: A | AA] | [count: number, actionName: A | AA]) => {
+      const actionName = args[1] ?? args[0];
+      let count = typeof args[0] === 'number' ? args[0] : 1;
+      let vid = this.history.versions[this.history.head];
+      const versions = this.history.versions.slice(0, this.history.head);
+      while (count > 0 && versions.length) {
+        const prev = versions.pop()!;
+        if (this.updates[prev] === actionName) {
+          count -= 1;
+          vid = prev;
+        }
+      }
+      return this.history.go(this.history.versions.findIndex(v => v === vid));
+    },
+    backTill: (...args: [actionName: A | AA] | [count: number, actionName: A | AA]) => {
+      this.travel.backFor(...args);
+      return this.travel.prev();
+    },
+    forwardFor: (...args: [actionName: A | AA] | [count: number, actionName: A | AA]) => {
+      const actionName = args[1] ?? args[0];
+      let count = typeof args[0] === 'number' ? args[0] : 1;
+      let vid = this.history.versions[this.history.head];
+      const versions = this.history.versions.slice(this.history.head + 1);
+      while (count > 0 && versions.length) {
+        const prev = versions.shift()!;
+        if (this.updates[prev] === actionName) {
+          count -= 1;
+          vid = prev;
+        }
+      }
+      return this.history.go(this.history.versions.findIndex(v => v === vid));
+    },
+    forwardTill: (...args: [actionName: A | AA] | [count: number, actionName: A | AA]) => {
+      // if failed to move forward, `prev()` will make the version behind the previous one.
+      const vidBeforeMove = this.history.versions[this.history.head];
+      this.travel.forwardFor(...args);
+      const vidAfterMove = this.history.versions[this.history.head];
+      return vidAfterMove === vidBeforeMove ? this.state : this.travel.prev();
+    },
+    latest: () => this.history.go(this.history.versions.length - 1),
+    clearForward: () => this.history.clearForward()
+  };
 
 }
 
@@ -204,10 +261,25 @@ export const createContext = <
   AD extends Record<`get${Uppercase<string>}`, ContextAdapter<S>>,
   EE extends Record<string, (...args: [any] | any) => any>
 >(config: {
+  /**
+   * Initial value of the state.
+   */
   init: S;
+  /**
+   * Action generators.
+   */
   actions?: A;
+  /**
+   * Async functions which is used to update the state.
+   */
   asyncActions?: AA;
+  /**
+   * Adapters used to describe a derivate value of the state.
+   */
   adapters?: AD;
+  /**
+   * Emittable events which will not cause an update.
+   */
   emitters?: EE;
 }): Context<S, A, AA, AD, EE> => {
   const store = new Store<S, keyof A & string, keyof AA & string, EE>(config.init);
@@ -228,7 +300,7 @@ export const createContext = <
         const nextState = await value(() => {
           return store.state;
         }, ...args);
-        return store.dispatchSync(key as keyof AA & string, () => nextState);
+        return store.dispatch(key as keyof AA & string, () => nextState);
       } catch (err) {
         console.error(err);
       }
@@ -244,11 +316,13 @@ export const createContext = <
     unsubscribe: store.unsubscribe.bind(store),
     listen: store.listen.bind(store),
     once: store.once.bind(store),
-    emit: store.emit.bind(store)
+    emit: (store.emit as any).bind(store),
+    travel: store.travel
   });
-  Object.entries(config.adapters ?? {}).forEach(([key, adapt]: [keyof AD & string, (state: Readonly<S>) => any]) => {
+  Object.entries(config.adapters ?? {}).forEach(entry => {
+    const [key, adapt] = entry as [keyof AD & string, (state: Readonly<S>) => any];
     if (/^get[A-Z]/.test(key)) {
-      const firstLetter = /^get(?<F>[A-Z])/.exec(key).groups.F;
+      const firstLetter = /^get(?<F>[A-Z])/.exec(key)!.groups!.F;
       const name = key.replace(new RegExp(`^get${firstLetter}`), firstLetter.toLowerCase());
       Object.defineProperty(computed, name, {
         get: () => {

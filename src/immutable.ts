@@ -103,25 +103,42 @@ export class Immutable<T> {
 
   private _data: ImmutableObject<T>;
   private _vids: string[];
+  private _flag: number;
 
   constructor(value: T) {
     const vid = nanoid(8);
     this._data = [createImmutableObject(value, vid)];
     this._vids = [vid];
+    this._flag = 0;
   }
 
   private push(value: T): void {
+    this.clearForward();
     const vid = nanoid(8);
     updateImmutableObject(this._data, value, vid);
     this._vids.push(vid);
+    this._flag = this._vids.length - 1;
+  }
+
+  private safeIdx(idx: number): number {
+    const index = (idx < 0 ? -1 : 1) * Math.floor(Math.abs(idx));
+    return Math.max(0, Math.min(this._vids.length - 1, index));
   }
 
   get current(): Readonly<T> {
-    return resolveImmutableObject(this._data, this._vids, [...this._vids].reverse()[0]);
+    return resolveImmutableObject(this._data, this._vids, this._vids[this._flag]);
   }
 
   set current(value: T) {
     this.push(value);
+  }
+
+  get versions(): Readonly<string[]> {
+    return [...this._vids];
+  }
+
+  get head(): number {
+    return this._flag;
   }
 
   debug(obj: ImmutableObject<any> = this._data, path = 'this'): void {
@@ -136,6 +153,27 @@ export class Immutable<T> {
         console.log(` @${ss[vidKey]} | ${ss[valueKey]}`);
       });
     }
+  }
+
+  at(idx: number): Readonly<T> {
+    let index = idx;
+    if (idx < 0) {
+      index = this._vids.length - 1 + idx;
+    }
+    return resolveImmutableObject(this._data, this._vids, this._vids[this.safeIdx(index)]);
+  }
+
+  go(idx: number): Readonly<T> {
+    let index = idx;
+    if (idx < 0) {
+      index = this._vids.length - 1 + idx;
+    }
+    this._flag = this.safeIdx(index);
+    return this.current;
+  }
+
+  clearForward(): void {
+    this._vids = this._vids.slice(0, this._flag + 1);
   }
 
 }
