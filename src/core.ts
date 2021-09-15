@@ -289,7 +289,7 @@ export const createContext = <
     actions[key as keyof A] = (...args: ActionArgs<S, typeof value>) => {
       return store.dispatch(key, value, ...args);
     };
-    syncActions[`${key as keyof A}Sync`] = (...args: ActionArgs<S, typeof value>) => {
+    (syncActions as any)[`${key as keyof A}Sync`] = (...args: ActionArgs<S, typeof value>) => {
       return store.dispatchSync(key, value, ...args);
     };
   });

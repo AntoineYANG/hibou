@@ -4,6 +4,7 @@ const valueKey: unique symbol = Symbol('value');
 const entriesKey: unique symbol = Symbol('entries');
 const vidKey: unique symbol = Symbol('vid');
 const neverVal: unique symbol = Symbol('never');
+const arrayFlag: unique symbol = Symbol('isArray');
 
 type ImmutableObject<T> = Array<{
   [valueKey]: T extends Record<string | number | symbol, any> ? typeof neverVal : T;
@@ -11,6 +12,7 @@ type ImmutableObject<T> = Array<{
     [K in keyof T]: ImmutableObject<T[K]>;
   } : typeof neverVal;
   [vidKey]: string;
+  [arrayFlag]?: true;
 }>;
 
 const createImmutableObject = <T>(value: T, vid: string): ImmutableObject<T>[0] => {
@@ -18,10 +20,11 @@ const createImmutableObject = <T>(value: T, vid: string): ImmutableObject<T>[0] 
     const ref = {
       [valueKey]: neverVal,
       [entriesKey]: {},
-      [vidKey]: vid
+      [vidKey]: vid,
+      [arrayFlag]: Array.isArray(value)
     } as unknown as ImmutableObject<T>[0];
     Object.entries(value).forEach(([k, v]) => {
-      ref[entriesKey][k] = [createImmutableObject(v, vid)];
+      (ref as any)[entriesKey][k] = [createImmutableObject(v, vid)];
     });
     return ref;
   }
@@ -53,8 +56,15 @@ const resolveImmutableObject = <T>(history: ImmutableObject<T>, vids: string[], 
   }
   const ref = {} as Readonly<T>;
   Object.entries(obj[entriesKey]).forEach(([k, v]) => {
-    ref[k] = resolveImmutableObject(v, vids, vid);
+    (ref as any)[k] = resolveImmutableObject(v, vids, vid);
   });
+  if (obj[arrayFlag]) {
+    const arr = [] as unknown as T;
+    Object.entries(ref).forEach(([k, v]) => {
+      (arr as any)[k] = v;
+    });
+    return arr;
+  }
   return ref;
 };
 
@@ -75,17 +85,17 @@ const updateImmutableObject = <T>(history: ImmutableObject<T>, next: T, vid: str
       let changed = false;
       const h = { ...prev, [vidKey]: vid };
       Object.entries(h[entriesKey]).forEach(([k, v]) => {
-        if (next[k] === undefined) {
+        if ((next as any)[k] === undefined) {
           changed = true;
           v[valueKey] = undefined;
         } else {
-          changed = updateImmutableObject(v, next[k], vid) || changed;
+          changed = updateImmutableObject(v, (next as any)[k], vid) || changed;
         }
       });
       Object.entries(next).forEach(([k, v]) => {
-        if (h[entriesKey][k] === undefined) {
+        if ((h as any)[entriesKey][k] === undefined) {
           changed = true;
-          h[entriesKey][k] = createImmutableObject(v, vid);
+          (h as any)[entriesKey][k] = [createImmutableObject(v, vid)];
         }
       });
       if (changed) {
