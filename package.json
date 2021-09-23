@@ -1,6 +1,6 @@
 {
   "name": "@kanatayou/hibou",
-  "version": "0.0.0-beta-1.0.1",
+  "version": "0.0.0-beta-1.0.2",
   "description": "a scalable state container module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,9 @@
   "scripts": {
     "demo": "ts-node demo.ts",
     "build": "cross-env NODE_ENV=production npx webpack",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint --ext .ts,.tsx src",
+    "prepublish": "npm run lint"
   },
   "repository": {
     "type": "git",
@@ -31,8 +33,11 @@
     "nanoid": "^3.1.25"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.31.2",
     "clean-webpack-plugin": "^4.0.0",
     "cross-env": "^7.0.3",
+    "eslint": "^7.32.0",
+    "eslint-plugin-react": "^7.26.0",
     "ts-loader": "^9.2.5",
     "webpack": "^5.52.1",
     "webpack-cli": "^4.8.0"

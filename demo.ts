@@ -1,19 +1,22 @@
-import { createContext } from "./src/core";
+/* eslint-disable no-console */
+/* eslint-disable no-magic-numbers */
+import { createContext } from './src/core';
 
 const obj = {
-  num: 12,
-  name: 'xyz',
+  num:   12,
+  name:  'xyz',
   inner: {
     id: 1 
   }
 };
 
 const context = createContext({
-  init: obj,
+  init:    obj,
   actions: {
     reset: () => ({
       num: 0
     }),
+    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
     plus: (s, n: number = 1) => ({
       num: s.num + n
     }),
@@ -32,13 +35,11 @@ const context = createContext({
     }
   },
   adapters: {
-    getDoubleNum: s => {
-      return s.num * 2;
-    }
+    getDoubleNum: s => s.num * 2
   },
   emitters: {
-    xxxEvent: () => {},
-    numEvent: (_: number) => {}
+    xxxEvent: () => 0,
+    numEvent: (_: number) => 0
   }
 });
 

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { nanoid } from 'nanoid';
 
 const valueKey: unique symbol = Symbol('value');
 const entriesKey: unique symbol = Symbol('entries');
@@ -7,8 +7,8 @@ const neverVal: unique symbol = Symbol('never');
 const arrayFlag: unique symbol = Symbol('isArray');
 
 type ImmutableObject<T> = Array<{
-  [valueKey]: T extends Record<string | number | symbol, any> ? typeof neverVal : T;
-  [entriesKey]: T extends Record<string | number | symbol, any> ? {
+  [valueKey]: T extends Record<string | number | symbol, unknown> ? typeof neverVal : T;
+  [entriesKey]: T extends Record<string | number | symbol, unknown> ? {
     [K in keyof T]: ImmutableObject<T[K]>;
   } : typeof neverVal;
   [vidKey]: string;
@@ -18,27 +18,31 @@ type ImmutableObject<T> = Array<{
 const createImmutableObject = <T>(value: T, vid: string): ImmutableObject<T>[0] => {
   if (typeof value === 'object' && value) {
     const ref = {
-      [valueKey]: neverVal,
+      [valueKey]:   neverVal,
       [entriesKey]: {},
-      [vidKey]: vid,
-      [arrayFlag]: Array.isArray(value)
+      [vidKey]:     vid,
+      [arrayFlag]:  Array.isArray(value)
     } as unknown as ImmutableObject<T>[0];
     Object.entries(value).forEach(([k, v]) => {
-      (ref as any)[entriesKey][k] = [createImmutableObject(v, vid)];
+      ref[entriesKey][k] = [createImmutableObject(v, vid)];
     });
     return ref;
   }
   return {
-    [valueKey]: value,
+    [valueKey]:   value,
     [entriesKey]: neverVal,
-    [vidKey]: vid
+    [vidKey]:     vid
   } as unknown as ImmutableObject<T>[0];
 };
 
-const findMatching = <T>(history: ImmutableObject<T>, allVids: string[], vid: string): ImmutableObject<T>[0] | undefined => {
+const findMatching = <T>(
+  history: ImmutableObject<T>, allVids: string[], vid: string
+): ImmutableObject<T>[0] | undefined => {
   const matchedVids: string[] = [];
-  for (let i = 0; i < allVids.length; i++) {
+
+  for (let i = 0; i < allVids.length; i += 1) {
     matchedVids.push(allVids[i]);
+
     if (allVids[i] === vid) {
       break;
     }
@@ -48,6 +52,7 @@ const findMatching = <T>(history: ImmutableObject<T>, allVids: string[], vid: st
 
 const resolveImmutableObject = <T>(history: ImmutableObject<T>, vids: string[], vid: string): Readonly<T> => {
   const obj = findMatching(history, vids, vid);
+
   if (!obj) {
     throw new Error(`Object is not found at ${vid}`);
   }
@@ -56,12 +61,13 @@ const resolveImmutableObject = <T>(history: ImmutableObject<T>, vids: string[], 
   }
   const ref = {} as Readonly<T>;
   Object.entries(obj[entriesKey]).forEach(([k, v]) => {
-    (ref as any)[k] = resolveImmutableObject(v, vids, vid);
+    ref[k] = resolveImmutableObject(v, vids, vid);
   });
+
   if (obj[arrayFlag]) {
     const arr = [] as unknown as T;
     Object.entries(ref).forEach(([k, v]) => {
-      (arr as any)[k] = v;
+      arr[k] = v;
     });
     return arr;
   }
@@ -69,7 +75,8 @@ const resolveImmutableObject = <T>(history: ImmutableObject<T>, vids: string[], 
 };
 
 const updateImmutableObject = <T>(history: ImmutableObject<T>, next: T, vid: string): boolean => {
-  const prev = [...history].reverse()[0];
+  const [prev] = [...history].reverse();
+
   if (prev[entriesKey] === neverVal) {
     if (typeof next === 'object' && next) {
       history.push(createImmutableObject(next, vid));
@@ -80,35 +87,39 @@ const updateImmutableObject = <T>(history: ImmutableObject<T>, next: T, vid: str
     }
     history.push(createImmutableObject(next, vid));
     return true;
-  } else {
-    if (typeof next === 'object' && next) {
-      let changed = false;
-      const h = { ...prev, [vidKey]: vid };
-      Object.entries(h[entriesKey]).forEach(([k, v]) => {
-        if ((next as any)[k] === undefined) {
-          changed = true;
-          v[valueKey] = undefined;
-        } else {
-          changed = updateImmutableObject(v, (next as any)[k], vid) || changed;
-        }
-      });
-      Object.entries(next).forEach(([k, v]) => {
-        if ((h as any)[entriesKey][k] === undefined) {
-          changed = true;
-          (h as any)[entriesKey][k] = [createImmutableObject(v, vid)];
-        }
-      });
-      if (changed) {
-        history.push(h);
+  } else if (typeof next === 'object' && next) {
+    let changed = false;
+    const h = { ...prev, [vidKey]: vid };
+    Object.entries(h[entriesKey]).forEach(([k, v]) => {
+      if (next[k] === undefined) {
+        changed = true;
+        v[valueKey] = undefined;
+      } else {
+        changed = updateImmutableObject(v, next[k], vid) || changed;
       }
-      return changed;
-    } else {
-      history.push(createImmutableObject(next, vid));
-      return true;
+    });
+    Object.entries(next).forEach(([k, v]) => {
+      if (h[entriesKey][k] === undefined) {
+        changed = true;
+        h[entriesKey][k] = [createImmutableObject(v, vid)];
+      }
+    });
+
+    if (changed) {
+      history.push(h);
     }
-  }
+    return changed;
+  } 
+  history.push(createImmutableObject(next, vid));
+  return true;
 };
 
+const ID_LEN = 8;
+
+/**
+ * @class Immutable
+ * @template T type of data
+ */
 export class Immutable<T> {
 
   private _data: ImmutableObject<T>;
@@ -116,7 +127,7 @@ export class Immutable<T> {
   private _flag: number;
 
   constructor(value: T) {
-    const vid = nanoid(8);
+    const vid = nanoid(ID_LEN);
     this._data = [createImmutableObject(value, vid)];
     this._vids = [vid];
     this._flag = 0;
@@ -124,7 +135,7 @@ export class Immutable<T> {
 
   private push(value: T): void {
     this.clearForward();
-    const vid = nanoid(8);
+    const vid = nanoid(ID_LEN);
     updateImmutableObject(this._data, value, vid);
     this._vids.push(vid);
     this._flag = this._vids.length - 1;
@@ -151,9 +162,11 @@ export class Immutable<T> {
     return this._flag;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   debug(obj: ImmutableObject<any> = this._data, path = 'this'): void {
-    const current = [...obj].reverse()[0];
+    const [current] = [...obj].reverse();
     console.log(`<${path}> @${current[vidKey]}`);
+    
     if (current[entriesKey] !== neverVal) {
       Object.entries(current[entriesKey]).forEach(([k, v]) => {
         this.debug(v, `${path}.${k}`);
@@ -167,6 +180,7 @@ export class Immutable<T> {
 
   at(idx: number): Readonly<T> {
     let index = idx;
+
     if (idx < 0) {
       index = this._vids.length - 1 + idx;
     }
@@ -175,6 +189,7 @@ export class Immutable<T> {
 
   go(idx: number): Readonly<T> {
     let index = idx;
+
     if (idx < 0) {
       index = this._vids.length - 1 + idx;
     }

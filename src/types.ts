@@ -1,80 +1,80 @@
 type Str<T> = T extends string ? T : T extends number | bigint | boolean ? `${T}` : never;
 
-export type Action<S extends Record<string, any>> = (
-  | ((prevState: Readonly<S>, ...args: any[]) => Partial<S>)
+export type Action<S extends Record<string, unknown>> = (
+  | ((prevState: Readonly<S>, ...args: unknown[]) => Partial<S>)
 );
 
-export type AsyncAction<S extends Record<string, any>> = (
-  | ((getState: () => Readonly<S>, ...args: any[]) => Promise<Partial<S>>)
+export type AsyncAction<S extends Record<string, unknown>> = (
+  | ((getState: () => Readonly<S>, ...args: unknown[]) => Promise<Partial<S>>)
 );
 
-export type ActionArgs<S extends Record<string, any>, A extends Action<S>> = (
+export type ActionArgs<S extends Record<string, unknown>, A extends Action<S>> = (
   | (A extends ((prevState: Readonly<S>, ...args: infer P) => Partial<S>) ? P : never)
 );
 
-export type AsyncActionArgs<S extends Record<string, any>, A extends AsyncAction<S>> = (
+export type AsyncActionArgs<S extends Record<string, unknown>, A extends AsyncAction<S>> = (
   | (A extends ((getState: () => Readonly<S>, ...args: infer P) => Promise<Partial<S>>) ? P : never)
 );
 
-type SyncParams<A extends Record<string, any>> = {
+type SyncParams<A extends Record<string, unknown>> = {
   [Name in keyof A]: Name extends string ? `${Name}Sync` : never;
 };
 
-type AsyncKey<A extends Record<string, any>, Name extends `${string}Sync`> = Name extends `${infer P}Sync` ? (
+type AsyncKey<A extends Record<string, unknown>, Name extends `${string}Sync`> = Name extends `${infer P}Sync` ? (
   P extends keyof A ? P : never
 ) : never;
 
-type SyncKeys<A extends Record<string, any>> = SyncParams<A>[keyof A];
+type SyncKeys<A extends Record<string, unknown>> = SyncParams<A>[keyof A];
 
 export type ContextActions<
-  S extends Record<string, any>,
+  S extends Record<string, unknown>,
   A extends Record<string, Action<S>>
 > = {
   [Name in keyof A]: (...args: ActionArgs<S, A[Name]>) => Promise<Readonly<S>>
 };
 
 export type ContextSyncActions<
-  S extends Record<string, any>,
+  S extends Record<string, unknown>,
   A extends Record<string, Action<S>>
 > = {
   [Key in SyncKeys<A>]: (...args: ActionArgs<S, A[AsyncKey<A, Key>]>) => Readonly<S>
 };
 
 export type ContextAsyncActions<
-  S extends Record<string, any>,
+  S extends Record<string, unknown>,
   AA extends Record<string, AsyncAction<S>>
 > = {
   [Name in keyof AA]: (...args: AsyncActionArgs<S, AA[Name]>) => Promise<Readonly<S | null>>
 };
 
 export type ContextAdapter<
-  S extends Record<string, any>
-> = (state: Readonly<S>) => any;
+  S extends Record<string, unknown>
+> = (state: Readonly<S>) => unknown;
 
-type AdapterParams<AD extends Record<string, any>> = {
+type AdapterParams<AD extends Record<string, unknown>> = {
   [Name in keyof AD]: Name extends `get${infer P}` ? P extends Capitalize<P> ? Uncapitalize<P> : never : never;
 };
 
 type AdapterKey<AD> = AD extends string ? `get${Capitalize<AD>}` : never;
 
-type AdaptedKeys<AD extends Record<string, any>> = AdapterParams<AD>[keyof AD];
+type AdaptedKeys<AD extends Record<string, unknown>> = AdapterParams<AD>[keyof AD];
 
 export type ComputedState<
-  S extends Record<string, any>,
+  S extends Record<string, unknown>,
   AD extends Record<string, ContextAdapter<S>>
 > = {
   [Name in AdaptedKeys<AD>]: Readonly<ReturnType<AD[AdapterKey<Name>]>>
 };
 
-type EventEmitters<EE extends Record<string, (...args: [any] | []) => any>> = {
+type EventEmitters<EE extends Record<string, (...args: [unknown] | []) => unknown>> = {
   /**
    * Emits an event, may be bound with a payload.
-   * An emitting will not cause any change of the state.
+   * An emitting will not cause unknown change of the state.
    */
   emit: <Name extends keyof EE>(eventName: Name, ...args: Parameters<EE[Name]>) => void;
 };
 
-export type TimeTravelCaller<S extends Record<string, any>, A extends string> = {
+export type TimeTravelCaller<S extends Record<string, unknown>, A extends string> = {
   /**
    * Returns the state at the `idx`-th version.
    * @param {number} idx index of the version, count from the end if `idx` is negative
@@ -84,7 +84,7 @@ export type TimeTravelCaller<S extends Record<string, any>, A extends string> = 
   /**
    * Resets the state to the `idx`-th version.
    * 
-   * Call `clearForward()` or update anything to delete all the records after this version.
+   * Call `clearForward()` or update unknownthing to delete all the records after this version.
    * @param {number} idx index of the version, count from the end if `idx` is negative
    * @returns {Readonly<S>} a readonly snapshot of the state reset
    */
@@ -93,7 +93,7 @@ export type TimeTravelCaller<S extends Record<string, any>, A extends string> = 
    * Resets the state to the certain version from the current one.
    * Version moves forward if `idx` is positive.
    * 
-   * Call `clearForward()` or update anything to delete all the records after this version.
+   * Call `clearForward()` or update unknownthing to delete all the records after this version.
    * @param {number} idx steps to move
    * @returns {Readonly<S>} a readonly snapshot of the state reset
    */
@@ -147,15 +147,15 @@ export type TimeTravelCaller<S extends Record<string, any>, A extends string> = 
   clearForward: () => void;
 };
 
-export type Pointer<S extends Record<string, any>> = (root: Readonly<S>) => any;
+export type Pointer<S extends Record<string, unknown>> = (root: Readonly<S>) => unknown;
 export type Getter<R> = () => Readonly<R>;
 
 export type Context<
-  S extends Record<string, any>,
+  S extends Record<string, unknown>,
   A extends Record<string, Action<S>>,
   AA extends Record<string, AsyncAction<S>>,
   AD extends Record<string, ContextAdapter<S>>,
-  EE extends Record<string, (...args: [any] | []) => any>
+  EE extends Record<string, (...args: [unknown] | []) => unknown>
 > = {
   /**
    * Gets a readonly snapshot of the current state.
@@ -164,7 +164,7 @@ export type Context<
   /**
    * Subscribe to the context.
    * @param {() => void} callback a callback which will be called once the context is updated
-   * @param {[(root: Readonly<S>) => any, ...((root: Readonly<S>) => any)[]]} deps
+   * @param {[(root: Readonly<S>) => unknown, ...((root: Readonly<S>) => unknown)[]]} deps
    * if `deps` is given, `callback` will be triggered only after one or more of these watched variables change.
    * A member of `deps` is a function describing how to get a watched value from the readonly current state.
    */
@@ -285,6 +285,35 @@ export type Context<
   travel: TimeTravelCaller<S, Str<keyof A | keyof AA>>;
 };
 
-export type Hooks<S extends Record<string, any>, A extends string, AA extends string> = {
+export type Hooks<S extends Record<string, unknown>, A extends string, AA extends string> = {
   beforeDispatch: ((actionName: A | AA, state: Readonly<S>, then: () => void) => void)[];
+};
+
+export type ContextInitConfig<
+S extends Record<string, unknown>,
+  A extends Record<string, Action<S>>,
+  AA extends Record<string, AsyncAction<S>>,
+  AD extends Record<`get${Uppercase<string>}`, ContextAdapter<S>>,
+  EE extends Record<string, (...args: [] | unknown[]) => unknown>
+> = {
+  /**
+   * Initial value of the state.
+   */
+  init: S;
+  /**
+   * Action generators.
+   */
+  actions?: A;
+  /**
+   * Async functions which is used to update the state.
+   */
+  asyncActions?: AA;
+  /**
+   * Adapters used to describe a derivate value of the state.
+   */
+  adapters?: AD;
+  /**
+   * Emittable events which will not cause an update.
+   */
+  emitters?: EE;
 };
