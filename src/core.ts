@@ -24,7 +24,8 @@ export const createContext = <
   A extends Record<string, Action<S>>,
   AA extends Record<string, AsyncAction<S>>,
   AD extends Record<`get${Uppercase<string>}`, ContextAdapter<S>>,
-  EE extends Record<string, (...args: [] | unknown[]) => unknown>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  EE extends Record<string, (...args: any[]) => unknown>
 >(config: ContextInitConfig<S, A, AA, AD, EE>): Context<S, A, AA, AD, EE> => {
   const store = new Store<S, keyof A & string, keyof AA & string, EE>(config.init);
   const actions = {} as ContextActions<S, A>;
