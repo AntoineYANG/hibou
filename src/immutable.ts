@@ -15,7 +15,7 @@ type ImmutableObject<T> = Array<{
   [arrayFlag]?: true;
 }>;
 
-const createImmutableObject = <T>(value: T, vid: string): ImmutableObject<T>[0] => {
+const createImmutableObject = <T>(value: T, vid: string, memo: unknown[] = []): ImmutableObject<T>[0] => {
   if (typeof value === 'object' && value) {
     const ref = {
       [valueKey]:   neverVal,
@@ -23,8 +23,13 @@ const createImmutableObject = <T>(value: T, vid: string): ImmutableObject<T>[0] 
       [vidKey]:     vid,
       [arrayFlag]:  Array.isArray(value)
     } as unknown as ImmutableObject<T>[0];
+    memo.push(value);
     Object.entries(value).forEach(([k, v]) => {
-      ref[entriesKey][k] = [createImmutableObject(v, vid)];
+      if (memo.includes(v)) {
+        return;
+      }
+      memo.push(v);
+      ref[entriesKey][k] = [createImmutableObject(v, vid, memo)];
     });
     return ref;
   }

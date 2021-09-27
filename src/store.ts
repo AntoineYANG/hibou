@@ -148,7 +148,7 @@ export default class Store<
       return;
     }
     this.isBatching = true;
-    setTimeout(() => this.update(), 10);
+    requestAnimationFrame(this.update.bind(this));
   }
 
   private update(): void {
@@ -159,6 +159,7 @@ export default class Store<
       this.updates[this.history.versions[this.history.head]] = action;
       resolveFuncs.push(resolve);
     });
+    this.batchQueue = [];
     resolveFuncs.forEach(resolve => {
       resolve(this.state);
     });
